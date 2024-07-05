@@ -1,0 +1,36 @@
+---
+- name: Linux patching
+  hosts: all
+  become: true
+  tasks:
+  - name: Ensures repo cache is up to date
+    ansible.builtin.apt:
+      update_cache: true
+    when: (ansible_facts.os_family == 'Debian')
+
+  - name: Ensures os is up to date
+    ansible.builtin.apt:
+      upgrade: true
+    when: (ansible_facts.os_family == 'Debian')
+
+  - name: Ensures local repo cache is clear
+    ansible.builtin.apt:
+      autoclean: true
+    when: (ansible_facts.os_family == 'Debian')
+
+  - name: Ensure unused dependices are removed
+    ansible.builtin.apt:
+      autoremove: true
+    when: (ansible_facts.os_family == 'Debian')
+
+  - name: Check if a reboot is needed
+    ansible.builtin.stat:
+      path: /var/run/reboot-required
+    register: file_check
+    when:
+      (ansible_facts.os_family == 'Debian')
+
+  - name: Ensures system is rebooted if needed
+    ansible.builtin.reboot:
+    when:
+      (file_check.stat.exists)
