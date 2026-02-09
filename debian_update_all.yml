@@ -1,6 +1,7 @@
 ---
 - name: Ensure Debian based hosts are patched
   hosts: all
+  serial: 1
   tasks:
     - name: Ensures local repo cache is clear
       ansible.builtin.apt:
