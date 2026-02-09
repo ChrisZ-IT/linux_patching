@@ -1,37 +1,76 @@
 ---
-- name: Linux patching
+- name: Ensure Debian based hosts are patched
   hosts: all
-  become: true
   tasks:
-  - name: Ensures local repo cache is clear
-    ansible.builtin.apt:
-      autoclean: true
-    when: (ansible_facts.os_family == 'Debian')
+    - name: Ensures local repo cache is clear
+      ansible.builtin.apt:
+        autoclean: true
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
 
-  - name: Ensure unused dependices are removed
-    ansible.builtin.apt:
-      autoremove: true
-    when: (ansible_facts.os_family == 'Debian')
+    - name: Ensure unused dependices are removed
+      ansible.builtin.apt:
+        autoremove: true
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
 
-  - name: Ensures repo cache is up to date
-    ansible.builtin.apt:
-      update_cache: true
-    when: (ansible_facts.os_family == 'Debian')
+    - name: Ensures repo cache is up to date
+      ansible.builtin.apt:
+        update_cache: true
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
 
-  - name: Ensures os is up to date
-    ansible.builtin.apt:
-      upgrade: true
-    when: (ansible_facts.os_family == 'Debian')
+    - name: Ensures os is up to date
+      ansible.builtin.apt:
+        upgrade: true
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
 
-  - name: Check if a reboot is needed
-    ansible.builtin.stat:
-      path: /var/run/reboot-required
-    register: file_check
-    when:
-      (ansible_facts.os_family == 'Debian')
+    - name: Check if a reboot is needed
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: file_check
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
+      notify: Reboot System
 
-  - name: Ensures system is rebooted if needed
-    ansible.builtin.reboot:
-    when:
-      (ansible_facts.os_family == 'Debian') and
-      (file_check.stat.exists)
+  handlers:
+    - name: Reboot System
+      block:
+        - name: Drain node before a reboot
+          kubernetes.core.k8s_drain:
+            state: drain
+            name: "{{ ansible_facts.nodename | lower }}"
+            delete_options:
+              delete_emptydir_data: true
+              ignore_daemonsets: true
+          delegate_to: "{{ k8s_control_node }}"
+          when: ansible_facts["hostname"] in groups["kubernetes"]
+
+        - name: Reboot System
+          ansible.builtin.reboot:
+          become: true
+          become_method: sudo
+      rescue:
+        - name: Uncordon node
+          kubernetes.core.k8s_drain:
+            state: uncordon
+            name: "{{ ansible_facts.nodename | lower  }}"
+          delegate_to: "{{ k8s_control_node }}"
+          when: ansible_facts["hostname"] in groups["kubernetes"]
+      always:
+        - name: Wait for system connection
+          ansible.builtin.wait_for_connection:
+            delay: 70
+
+        - name: Uncordon node after rebooot
+          kubernetes.core.k8s_drain:
+            state: uncordon
+            name: "{{ ansible_facts.nodename | lower  }}"
+          delegate_to: "{{ k8s_control_node }}"
+          when: ansible_facts["hostname"] in groups["kubernetes"]
+
+        - name: Wait for pods to start again
+          ansible.builtin.wait_for_connection:
+            delay: 60
+          when: ansible_facts["hostname"] in groups["kubernetes"]
