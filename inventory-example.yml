@@ -1,0 +1,17 @@
+all:
+  children:
+    kubernetes:
+      hosts:
+        kubecon01.domain.local:
+        kubewrk01.domain.local:
+        kubewrk02.domain.local:
+        kubewrk03.domain.local:
+    mgmt_servers:
+      hosts:
+        sshjmp01.domain.local:
+          ansible_ssh_port: 443
+    webservers:
+      hosts:
+        webserver01.domain.local:
+        webserver02.domain.local:
+        webserver03.domain.local:
