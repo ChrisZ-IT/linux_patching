@@ -3,10 +3,6 @@
   hosts: all
   serial: 1
   tasks:
-    - name: Output Inventory Group
-      ansible.builtin.debug:
-        msg: "{{ groups }}"
-
     - name: Ensures local repo cache is clear
       ansible.builtin.apt:
         autoclean: true
