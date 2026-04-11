@@ -56,7 +56,7 @@
         - name: Uncordon node
           kubernetes.core.k8s_drain:
             state: uncordon
-            name: "{{ ansible_facts.nodename | lower  }}"
+            name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
           when: ansible_facts["hostname"] in groups["kubernetes"]
       always:
@@ -67,7 +67,7 @@
         - name: Uncordon node after rebooot
           kubernetes.core.k8s_drain:
             state: uncordon
-            name: "{{ ansible_facts.nodename | lower  }}"
+            name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
           when: ansible_facts["hostname"] in groups["kubernetes"]
 
