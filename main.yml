@@ -50,6 +50,7 @@
               ignore_daemonsets: true
           delegate_to: "{{ k8s_control_node }}"
           when:
+            (groups['kubernetes'] is defined) and
             (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
             (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower )
 
@@ -64,6 +65,7 @@
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
           when:
+            (groups['kubernetes'] is defined) and
             (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
             (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower )
       always:
@@ -77,6 +79,7 @@
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
           when:
+            (groups['kubernetes'] is defined) and
             (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
             (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower )
 
@@ -84,6 +87,7 @@
           ansible.builtin.wait_for_connection:
             delay: 60
           when:
+            (groups['kubernetes'] is defined) and
             (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
             (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower )
       when: file_check.changed
