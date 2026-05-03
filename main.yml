@@ -26,6 +26,8 @@
     - name: Ensures os is up to date
       ansible.builtin.apt:
         upgrade: true
+      environment:
+        DEBIAN_FRONTEND: noninteractive
       become: true
       when: (ansible_facts.os_family == 'Debian')
 
