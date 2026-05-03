@@ -18,6 +18,8 @@
     - name: Ensures repo cache is up to date
       ansible.builtin.apt:
         update_cache: true
+      environment:
+        DEBIAN_FRONTEND: noninteractive
       become: true
       when: (ansible_facts.os_family == 'Debian')
 
@@ -45,7 +47,7 @@
               delete_emptydir_data: true
               ignore_daemonsets: true
           delegate_to: "{{ k8s_control_node }}"
-          when: (groups['kubernetes'] is defined)
+          when: groups['kubernetes'] is defined
 
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
@@ -57,7 +59,7 @@
             state: uncordon
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
-          when: (groups['kubernetes'] is defined)
+          when: groups['kubernetes'] is defined
       always:
         - name: Wait for system connection
           ansible.builtin.wait_for_connection:
@@ -68,10 +70,10 @@
             state: uncordon
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
-          when: (groups['kubernetes'] is defined)
+          when: groups['kubernetes'] is defined
 
         - name: Wait for pods to start again
           ansible.builtin.wait_for_connection:
             delay: 60
-          when: (groups['kubernetes'] is defined)
+          when: groups['kubernetes'] is defined
       when: file_check.changed
