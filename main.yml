@@ -45,10 +45,7 @@
               delete_emptydir_data: true
               ignore_daemonsets: true
           delegate_to: "{{ k8s_control_node }}"
-          when:
-            (groups['kubernetes'] is defined) and
-            (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
-            (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower )
+          when: (groups['kubernetes'] is defined)
 
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
@@ -60,10 +57,7 @@
             state: uncordon
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
-          when:
-            ((groups['kubernetes'] is defined) and
-            (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
-            (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower ))
+          when: (groups['kubernetes'] is defined)
       always:
         - name: Wait for system connection
           ansible.builtin.wait_for_connection:
@@ -74,16 +68,10 @@
             state: uncordon
             name: "{{ ansible_facts.nodename | lower }}"
           delegate_to: "{{ k8s_control_node }}"
-          when:
-            ((groups['kubernetes'] is defined) and
-            (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
-            (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower ))
+          when: (groups['kubernetes'] is defined)
 
         - name: Wait for pods to start again
           ansible.builtin.wait_for_connection:
             delay: 60
-          when:
-            ((groups['kubernetes'] is defined) and
-            (ansible_facts['hostname'] | lower ) in (groups['kubernetes'] | lower ) or
-            (ansible_facts['nodename'] | lower ) in (groups['kubernetes'] | lower ))
+          when: (groups['kubernetes'] is defined)
       when: file_check.changed
