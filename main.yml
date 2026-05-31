@@ -3,6 +3,14 @@
   hosts: all
   serial: 1
   tasks:
+    - name: Allow repository release info changes
+      ansible.builtin.copy:
+        content: 'Acquire::AllowReleaseInfoChange "true";'
+        dest: /etc/apt/apt.conf.d/99allow-release-change
+        mode: '0644'
+      become: true
+      when: (ansible_facts.os_family == 'Debian')
+
     - name: Ensures local repo cache is clear
       ansible.builtin.apt:
         autoclean: true
