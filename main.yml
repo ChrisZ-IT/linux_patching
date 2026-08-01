@@ -17,7 +17,7 @@
       become: true
       when: (ansible_facts.os_family == 'Debian')
 
-    - name: Ensure unused dependices are removed
+    - name: Ensure unused dependencies are removed
       ansible.builtin.apt:
         autoremove: true
       become: true
@@ -56,11 +56,13 @@
             delete_options:
               delete_emptydir_data: true
               ignore_daemonsets: true
+              terminate_grace_period: 900
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
 
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
+            reboot_timeout: 3600
           become: true
           become_method: sudo
       rescue:
