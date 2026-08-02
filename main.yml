@@ -90,9 +90,8 @@
       rescue:
         - name: Drain node before a reboot
           kubernetes.core.k8s_drain:
-            state: drain
+            state: cordon
             name: "{{ inventory_hostname }}"
-          timeout: 660
           register: drain_status
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
