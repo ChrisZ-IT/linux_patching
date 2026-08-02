@@ -45,47 +45,66 @@
       register: file_check
       become: true
       when: (ansible_facts.os_family == 'Debian')
-      changed_when: file_check.stat.exists
 
     - name: Reboot System
       block:
         - name: Drain node before a reboot
           kubernetes.core.k8s_drain:
             state: drain
-            name: "{{ ansible_facts.nodename | lower }}"
+            name: "{{ inventory_hostname }}"
             delete_options:
               delete_emptydir_data: true
               ignore_daemonsets: true
-              terminate_grace_period: 900
+          timeout: 660
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
+          any_errors_fatal: true
 
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
             reboot_timeout: 3600
           become: true
           become_method: sudo
-      rescue:
-        - name: Uncordon node
-          kubernetes.core.k8s_drain:
-            state: uncordon
-            name: "{{ ansible_facts.nodename | lower }}"
-          delegate_to: "{{ k8s_control_node }}"
-          when: groups['kubernetes'] is defined
-      always:
+
         - name: Wait for system connection
           ansible.builtin.wait_for_connection:
-            delay: 70
+            delay: 60
 
-        - name: Uncordon node after rebooot
+        - name: Wait for node to report Ready status
+          kubernetes.core.k8s_info:
+            kind: Node
+            name: "{{ inventory_hostname }}"
+          delegate_to: "{{ k8s_control_node }}"
+          register: node_info
+          until:
+            - node_info.resources[0].status.conditions | selectattr('type', 'equalto', 'Ready') | map(attribute='status') | first == 'True'
+          retries: 30
+          delay: 10
+          when: groups['kubernetes'] is defined
+
+        - name: Uncordon node after reboot
           kubernetes.core.k8s_drain:
             state: uncordon
-            name: "{{ ansible_facts.nodename | lower }}"
+            name: "{{ inventory_hostname }}"
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
 
-        - name: Wait for pods to start again
+        - name: Give pods a chance to start before continuing
           ansible.builtin.wait_for_connection:
             delay: 60
+      rescue:
+        - name: Recover and Uncordon node if drain/reboot failed
+          kubernetes.core.k8s_drain:
+            state: uncordon
+            name: "{{ inventory_hostname }}"
+          delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
-      when: file_check.changed
+      when:
+        - file_check.stat.exists
+
+    - name: Always ensure k8s nodes are uncondoned
+      kubernetes.core.k8s_drain:
+        state: uncordon
+        name: "{{ inventory_hostname }}"
+      delegate_to: "{{ k8s_control_node }}"
+      when: groups['kubernetes'] is defined
