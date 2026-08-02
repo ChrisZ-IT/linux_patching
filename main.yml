@@ -68,10 +68,6 @@
           become: true
           become_method: sudo
 
-        - name: Wait for system connection
-          ansible.builtin.wait_for_connection:
-            delay: 60
-
         - name: Wait for node to report Ready status
           kubernetes.core.k8s_info:
             kind: Node
@@ -83,10 +79,6 @@
           retries: 30
           delay: 10
           when: groups['kubernetes'] is defined
-
-        - name: Give pods a chance to start before continuing
-          ansible.builtin.wait_for_connection:
-            delay: 60
       rescue:
         - name: Drain node before a reboot
           kubernetes.core.k8s_drain:
@@ -100,7 +92,6 @@
           ansible.builtin.set_fact:
             skip_uncordon: true
           when: groups['kubernetes'] is defined
-
       when:
         - file_check.stat.exists
 
