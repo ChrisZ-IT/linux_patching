@@ -2,6 +2,8 @@
 - name: Ensure Debian based hosts are patched
   hosts: all
   serial: 1
+  vars:
+    skip_uncordon: false
   tasks:
     - name: Allow repository release info changes
       ansible.builtin.copy:
@@ -58,7 +60,6 @@
           timeout: 660
           register: drain_status
           delegate_to: "{{ k8s_control_node }}"
-          any_errors_fatal: true
           when: groups['kubernetes'] is defined
 
         - name: Ensure Server is rebooted
@@ -66,10 +67,6 @@
             reboot_timeout: 3600
           become: true
           become_method: sudo
-
-        - name: Wait for system connection
-          ansible.builtin.wait_for_connection:
-            delay: 60
 
         - name: Wait for node to report Ready status
           kubernetes.core.k8s_info:
@@ -82,26 +79,19 @@
           retries: 30
           delay: 10
           when: groups['kubernetes'] is defined
-
-        - name: Uncordon node after reboot
+      rescue:
+        - name: Drain node before a reboot
           kubernetes.core.k8s_drain:
-            state: uncordon
+            state: cordon
             name: "{{ inventory_hostname }}"
+          register: drain_status
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
 
-        - name: Give pods a chance to start before continuing
-          ansible.builtin.wait_for_connection:
-            delay: 60
-      rescue:
-        - name: Recover and Uncordon node if drain/reboot failed
-          kubernetes.core.k8s_drain:
-            state: uncordon
-            name: "{{ inventory_hostname }}"
-          delegate_to: "{{ k8s_control_node }}"
-          when:
-            (drain_status is defined and drain_status.failed != true) or
-            groups['kubernetes'] is defined
+        - name: Set skip_uncordon
+          ansible.builtin.set_fact:
+            skip_uncordon: true
+          when: groups['kubernetes'] is defined
       when:
         - file_check.stat.exists
 
@@ -110,6 +100,12 @@
         state: uncordon
         name: "{{ inventory_hostname }}"
       delegate_to: "{{ k8s_control_node }}"
+      register: uncordon_status
       when:
-        (drain_status is defined and drain_status.failed != true) or
-        groups['kubernetes'] is defined
+        (not skip_uncordon) and
+        (groups['kubernetes'] is defined)
+
+    - name: Give pods a chance to start before continuing
+      ansible.builtin.wait_for_connection:
+        delay: 60
+      when: uncordon_status.changed
