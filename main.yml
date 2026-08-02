@@ -58,6 +58,7 @@
           timeout: 660
           register: drain_status
           delegate_to: "{{ k8s_control_node }}"
+          any_errors_fatal: true
           when: groups['kubernetes'] is defined
 
         - name: Ensure Server is rebooted
@@ -101,7 +102,6 @@
           when:
             (drain_status is defined and drain_status.failed != true) or
             groups['kubernetes'] is defined
-      any_errors_fatal: true
       when:
         - file_check.stat.exists
 
