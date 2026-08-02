@@ -2,6 +2,8 @@
 - name: Ensure Debian based hosts are patched
   hosts: all
   serial: 1
+  vars:
+    skip_uncordon: false
   tasks:
     - name: Allow repository release info changes
       ansible.builtin.copy:
@@ -61,6 +63,13 @@
           any_errors_fatal: true
           when: groups['kubernetes'] is defined
 
+        - name: Set skip_uncordon
+          ansible.builtin.set_fact:
+            skip_uncordon: true
+          when:
+            (drain_status is defined and
+            not drain_status.failed)
+
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
             reboot_timeout: 3600
@@ -88,7 +97,9 @@
             state: uncordon
             name: "{{ inventory_hostname }}"
           delegate_to: "{{ k8s_control_node }}"
-          when: groups['kubernetes'] is defined
+          when:
+            (not skip_uncordon) and
+            (groups['kubernetes'] is defined)
 
         - name: Give pods a chance to start before continuing
           ansible.builtin.wait_for_connection:
@@ -100,8 +111,8 @@
             name: "{{ inventory_hostname }}"
           delegate_to: "{{ k8s_control_node }}"
           when:
-            (drain_status is defined and drain_status.failed != true) or
-            groups['kubernetes'] is defined
+            (not skip_uncordon) and
+            (groups['kubernetes'] is defined)
       when:
         - file_check.stat.exists
 
@@ -111,5 +122,5 @@
         name: "{{ inventory_hostname }}"
       delegate_to: "{{ k8s_control_node }}"
       when:
-        (drain_status is defined and drain_status.failed != true) or
-        groups['kubernetes'] is defined
+        (not skip_uncordon) and
+        (groups['kubernetes'] is defined)
