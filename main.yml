@@ -88,9 +88,20 @@
           ansible.builtin.wait_for_connection:
             delay: 60
       rescue:
+        - name: Drain node before a reboot
+          kubernetes.core.k8s_drain:
+            state: drain
+            name: "{{ inventory_hostname }}"
+          timeout: 660
+          register: drain_status
+          delegate_to: "{{ k8s_control_node }}"
+          when: groups['kubernetes'] is defined
+
         - name: Set skip_uncordon
           ansible.builtin.set_fact:
             skip_uncordon: true
+          when: groups['kubernetes'] is defined
+
       when:
         - file_check.stat.exists
 
