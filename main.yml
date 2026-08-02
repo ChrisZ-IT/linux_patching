@@ -59,7 +59,6 @@
           register: drain_status
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
-          any_errors_fatal: true
 
         - name: Ensure Server is rebooted
           ansible.builtin.reboot:
@@ -100,8 +99,9 @@
             name: "{{ inventory_hostname }}"
           delegate_to: "{{ k8s_control_node }}"
           when:
-            groups['kubernetes'] is defined and
-            drain_status.status != failed
+            (drain_status is defined and drain_status.failed != true) or
+            groups['kubernetes'] is defined
+      any_errors_fatal: true
       when:
         - file_check.stat.exists
 
@@ -111,5 +111,5 @@
         name: "{{ inventory_hostname }}"
       delegate_to: "{{ k8s_control_node }}"
       when:
-        (drain_status.status is defined and drain_status.status != failed) and
+        (drain_status is defined and drain_status.failed != true) or
         groups['kubernetes'] is defined
