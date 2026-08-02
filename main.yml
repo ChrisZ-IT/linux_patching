@@ -56,6 +56,7 @@
               delete_emptydir_data: true
               ignore_daemonsets: true
           timeout: 660
+          register: drain_status
           delegate_to: "{{ k8s_control_node }}"
           when: groups['kubernetes'] is defined
           any_errors_fatal: true
@@ -107,4 +108,6 @@
         state: uncordon
         name: "{{ inventory_hostname }}"
       delegate_to: "{{ k8s_control_node }}"
-      when: groups['kubernetes'] is defined
+      when:
+        groups['kubernetes'] is defined and
+        drain_status.status != failed
