@@ -91,9 +91,6 @@
         - name: Set skip_uncordon
           ansible.builtin.set_fact:
             skip_uncordon: true
-          when:
-            (drain_status is defined and
-            not drain_status.failed)
       when:
         - file_check.stat.exists
 
