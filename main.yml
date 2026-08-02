@@ -99,7 +99,9 @@
             state: uncordon
             name: "{{ inventory_hostname }}"
           delegate_to: "{{ k8s_control_node }}"
-          when: groups['kubernetes'] is defined
+          when:
+            groups['kubernetes'] is defined and
+            drain_status.status != failed
       when:
         - file_check.stat.exists
 
