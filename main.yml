@@ -112,4 +112,4 @@
       delegate_to: "{{ k8s_control_node }}"
       when:
         groups['kubernetes'] is defined and
-        drain_status.status != failed
+        (drain_status.status is defined and drain_status.status != failed)
